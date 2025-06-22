@@ -1,0 +1,27 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    # --- THIS IS THE KEY FIX ---
+    # We tell uvicorn exactly where the app's source code is.
+    # Note we now call 'main:app' instead of 'app.main:app'.
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload --app-dir /app/app
+    environment:
+      - DATABASE_URL=postgresql://user:password@db/db
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=db
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+
+volumes:
+  pgdata:
