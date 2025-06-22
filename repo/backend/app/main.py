@@ -6,14 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # Use absolute imports starting from 'app'
 from app.database import SessionLocal
 from app.api import router as api_router # Import the router correctly
-
-# This dependency provides a database session to endpoints
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+from app.dependencies import get_db
 
 app = FastAPI(title="Sagole Database Admin Panel API")
 

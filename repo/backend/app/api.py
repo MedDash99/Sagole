@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 # Import the new schema and the get_db dependency
 from . import db_manager, schemas
-from .main import get_db
+from .dependencies import get_db
 
 router = APIRouter()
 

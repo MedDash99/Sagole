@@ -4,7 +4,6 @@ import axios from 'axios';
 const API_URL = 'http://localhost:8000/api/v1';
 
 // --- Styling Object ---
-// Improved, more "easy on the eyes" styling as requested.
 const styles = {
   app: { fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif', display: 'flex', height: '100vh', backgroundColor: '#f4f7f6' },
   sidebar: { width: '250px', borderRight: '1px solid #e0e0e0', padding: '20px', backgroundColor: '#ffffff' },
@@ -21,8 +20,7 @@ const styles = {
   tableContainer: { marginTop: '20px', backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
   table: { width: '100%', borderCollapse: 'collapse' },
   th: { borderBottom: '2px solid #dee2e6', padding: '12px', textAlign: 'left', backgroundColor: '#f8f9fa' },
-  td: { borderBottom: '1px solid #eff2f5', padding: '12px', verticalAlign: 'middle' },
-  trHover: { '&:hover': { backgroundColor: '#f8f9fa' } },
+  td: { borderBottom: '1px solid #eff2f5', padding: '12px',  verticalAlign: 'middle', color: '#333'},  trHover: { '&:hover': { backgroundColor: '#f8f9fa' } },
   noData: { textAlign: 'center', padding: '20px', color: '#6c757d' },
   actionButton: {
     padding: '6px 12px', fontSize: '14px', borderRadius: '4px', cursor: 'pointer',
