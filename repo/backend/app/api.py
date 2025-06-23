@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy import inspect
 
 # Import the new schema and the get_db dependency
 from . import db_manager, schemas
@@ -23,6 +24,64 @@ def submit_change_for_approval(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to submit change: {str(e)}")
 
+@router.get("/tables/{table_name}/schema")
+def get_table_schema(table_name: str):
+    """
+    Get the schema information for a specific table
+    """
+    try:
+        schema = db_manager.get_table_schema(table_name=table_name)
+        return {"table": table_name, "schema": schema}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/changes")
+def get_pending_changes(db: Session = Depends(get_db)):
+    """
+    Get all pending changes for approval
+    """
+    try:
+        changes = db_manager.get_pending_changes(db=db)
+        return {"changes": changes}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/changes/{change_id}/approve")
+def approve_change(change_id: int, db: Session = Depends(get_db)):
+    """
+    Approve a pending change
+    """
+    try:
+        result = db_manager.approve_change(db=db, change_id=change_id)
+        return {"message": "Change approved successfully", "change_id": change_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/changes/{change_id}/reject")
+def reject_change(change_id: int, db: Session = Depends(get_db)):
+    """
+    Reject a pending change
+    """
+    try:
+        result = db_manager.reject_change(db=db, change_id=change_id)
+        return {"message": "Change rejected successfully", "change_id": change_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/tables/{table_name}/{record_id}", status_code=204)
+def delete_record_from_table(
+    table_name: str, 
+    record_id: int, 
+    db: Session = Depends(get_db)
+):
+    """Deletes a record from a table."""
+    try:
+        db_manager.delete_record(db=db, table_name=table_name, record_id=record_id)
+        return {"message": "Record deleted successfully"}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # --- Keep the other endpoints as they are ---
 
