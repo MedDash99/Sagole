@@ -1,6 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import inspect
+from fastapi.security import OAuth2PasswordRequestForm
+from . import auth, models
 
 # Import the new schema and the get_db dependency
 from . import db_manager, schemas
@@ -9,6 +11,22 @@ from .dependencies import get_db
 router = APIRouter()
 
 # --- Add the new endpoint below ---
+
+@router.post("/token")
+def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.username == form_data.username).first()
+    if not user or not auth.verify_password(form_data.password, user.password):
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = auth.create_access_token(
+        data={"sub": user.username, "role": user.role}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer", "role": user.role}
+
 
 @router.post("/changes", status_code=201)
 def submit_change_for_approval(
@@ -83,11 +101,9 @@ def delete_record_from_table(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- Keep the other endpoints as they are ---
 
 @router.post("/seed")
 def seed_db():
-    # ... (this function stays the same)
     try:
         result = db_manager.seed_database()
         return result
@@ -96,7 +112,6 @@ def seed_db():
 
 @router.get("/tables")
 def list_tables():
-    # ... (this function stays the same)
     try:
         tables = db_manager.get_all_table_names()
         return {"tables": tables}
@@ -105,7 +120,6 @@ def list_tables():
 
 @router.get("/tables/{table_name}")
 def get_data_from_table(table_name: str, limit: int = 20, offset: int = 0):
-    # ... (this function stays the same)
     try:
         if table_name not in db_manager.get_all_table_names():
             raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found.")

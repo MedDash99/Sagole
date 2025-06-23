@@ -6,19 +6,15 @@ import DataBrowser from './DataBrowser';
 import ChangeRequests from './ChangeRequests';
 import PredefinedQueries from './PredefinedQueries';
 import Settings from './Settings';
+import LoginPage from './LoginPage';
 import './App.css';
 
 function AppContent() {
   const { isAuthenticated, isAdmin, appState, updateAppState } = useAppContext();
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!isAuthenticated) {
-      // For now, we'll simulate authentication
-      // In a real app, you'd redirect to a login page
-      console.log('User not authenticated');
-    }
-  }, [isAuthenticated]);
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
 
   // This function will render the correct component based on the active view
   const renderActiveView = () => {
@@ -35,23 +31,6 @@ function AppContent() {
         return <DataBrowser />;
     }
   };
-
-  if (!isAuthenticated) {
-    return (
-      <div className="login-placeholder">
-        <h1>Database Admin Panel</h1>
-        <p>Please log in to continue</p>
-        <button onClick={() => {
-          // Simulate login for demo purposes
-          localStorage.setItem('authToken', 'demo-token');
-          localStorage.setItem('userRole', 'admin');
-          window.location.reload();
-        }}>
-          Demo Login (Admin)
-        </button>
-      </div>
-    );
-  }
 
   return (
     <DashboardLayout 

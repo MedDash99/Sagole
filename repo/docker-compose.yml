@@ -5,12 +5,12 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
-    # --- THIS IS THE KEY FIX ---
-    # We tell uvicorn exactly where the app's source code is.
-    # Note we now call 'main:app' instead of 'app.main:app'.
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload --app-dir /app/app
+    command: sh -c "./wait-for-postgres.sh db uvicorn main:app --host 0.0.0.0 --port 8000 --reload --app-dir /app/app"
     environment:
       - DATABASE_URL=postgresql://user:password@db/db
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=db
     depends_on:
       - db
 

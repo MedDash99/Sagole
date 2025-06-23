@@ -36,12 +36,12 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   const login = (token, role) => {
+    // In a real app, you would verify the token and fetch user info from the backend
     localStorage.setItem('authToken', token);
     localStorage.setItem('userRole', role);
     setIsAuthenticated(true);
     setUser({ role });
     setIsAdmin(role === 'admin');
-    
     // Reset app state to clean defaults
     setAppState({
       activeView: 'dataBrowser',
