@@ -38,7 +38,6 @@ export default function DataBrowser() {
         if (response.data.tables.length > 0 && (!selectedTable || !response.data.tables.includes(selectedTable))) {
           const newSelectedTable = response.data.tables[0];
           setSelectedTable(newSelectedTable);
-          updateAppState({ selectedTable: newSelectedTable });
         }
       } catch (err) {
         if (err.name !== 'CanceledError') {
@@ -49,7 +48,7 @@ export default function DataBrowser() {
     };
     fetchTables();
     return () => controller.abort();
-  }, [currentEnvironment, selectedTable, updateAppState]);
+  }, [currentEnvironment]);
 
   // Effect 2: Fetch data for the selected table with pagination and filters
   useEffect(() => {

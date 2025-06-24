@@ -7,8 +7,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import SessionLocal
 from app.api import router as api_router # Import the router correctly
 from app.dependencies import get_db
+from app import db_manager
 
 app = FastAPI(title="Sagole Database Admin Panel API")
+
+@app.on_event("startup")
+def on_startup():
+    """Seed the database on startup."""
+    db_manager.seed_database()
 
 # CORS middleware to allow frontend requests
 origins = ["http://localhost:5173", "http://localhost:3000"]

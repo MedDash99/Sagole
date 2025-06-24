@@ -5,9 +5,10 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
-    command: sh -c "./wait-for-postgres.sh db uvicorn main:app --host 0.0.0.0 --port 8000 --reload --app-dir /app/app"
+    command: sh -c "chmod +x ./wait-for-postgres.sh && ./wait-for-postgres.sh db alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000 --reload --app-dir /app/app"
     environment:
       - DATABASE_URL=postgresql://user:password@db/db
+      - DB_SCHEMA=dev
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=password
       - POSTGRES_DB=db

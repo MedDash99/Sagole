@@ -4,9 +4,9 @@ from datetime import datetime
 import enum
 
 class ChangeStatus(str, enum.Enum):
-    PENDING = "pending"
-    APPROVED = "approved"
-    REJECTED = "rejected"
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
 
 # Schema for the request body of the /changes endpoint
 class ChangeRequest(BaseModel):
@@ -14,6 +14,15 @@ class ChangeRequest(BaseModel):
     record_id: Optional[int] = None
     old_values: Optional[dict[str, Any]] = None
     new_values: dict[str, Any]
+
+# Token Schemas
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    role: str
+
+class TokenData(BaseModel):
+    username: Optional[str] = None
 
 # User Schemas
 class UserBase(BaseModel):
@@ -64,6 +73,25 @@ class SnapshotCreate(SnapshotBase):
 class Snapshot(SnapshotBase):
     id: int
     created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+# AuditLog Schemas
+class AuditLogBase(BaseModel):
+    pending_change_id: int
+    table_name: str
+    record_id: str
+    before_state: Optional[dict[str, Any]] = None
+    after_state: dict[str, Any]
+    approved_by_id: int
+
+class AuditLogCreate(AuditLogBase):
+    pass
+
+class AuditLog(AuditLogBase):
+    id: int
+    approved_at: datetime
 
     class Config:
         orm_mode = True 

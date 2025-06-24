@@ -16,7 +16,7 @@ if config.config_file_name is not None:
 # 1. Import your app's Base and all your models.
 # This is how Alembic knows about the tables you want to create.
 from app.database import Base
-from app.models import PendingChange, Snapshot
+from app.models import User, Product, PendingChange, Snapshot
 
 # 2. Set the target_metadata to your app's Base.
 target_metadata = Base.metadata
@@ -61,11 +61,29 @@ def run_migrations_online() -> None:
     # 3. Import your app's database engine and use it directly.
     # This ensures Alembic uses the exact same connection as your app.
     from app.database import engine
+    import os
+    from sqlalchemy import text
+
+    # Get schema from environment variable, default to 'dev'
+    schema = os.environ.get("DB_SCHEMA", "dev")
 
     with engine.connect() as connection:
+        # Create schema if it doesn't exist
+        connection.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
+        
+        # Set search path to this schema
+        connection.execute(text(f"SET search_path TO {schema}"))
+
+        # In the context, ensure Alembic knows about the schema
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection, 
+            target_metadata=target_metadata,
+            version_table_schema=schema,
+            include_schemas=True # We are using schemas
         )
+        
+        # Also set the schema for the metadata object
+        target_metadata.schema = schema
 
         with context.begin_transaction():
             context.run_migrations()

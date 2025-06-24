@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { useAppContext } from './contexts/AppContext';
+import axios from 'axios';
+
+const API_URL = 'http://localhost:8000/api/v1';
 
 const LoginPage = () => {
   const { login } = useAppContext();
@@ -7,15 +10,23 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Mock authentication logic
-    if (username === 'admin' && password === 'admin') {
-      login('demo-token', 'admin');
-    } else if (username === 'user' && password === 'user') {
-      login('demo-token', 'user');
-    } else {
-      setError('Invalid credentials');
+    setError('');
+
+    const params = new URLSearchParams();
+    params.append('username', username);
+    params.append('password', password);
+
+    try {
+      const response = await axios.post(`${API_URL}/token`, params, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      });
+      const { access_token, role } = response.data;
+      login(access_token, role);
+    } catch (err) {
+      setError('Invalid username or password');
+      console.error('Login failed:', err);
     }
   };
 

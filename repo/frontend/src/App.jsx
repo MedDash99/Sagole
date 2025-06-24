@@ -1,7 +1,7 @@
 // frontend/src/App.jsx
 import { useEffect } from 'react';
 import { AppProvider, useAppContext } from './contexts/AppContext';
-import DashboardLayout from './DashBoardLayout';
+import DashboardLayout from './DashboardLayout';
 import DataBrowser from './DataBrowser';
 import ChangeRequests from './ChangeRequests';
 import PredefinedQueries from './PredefinedQueries';

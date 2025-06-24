@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import axios from 'axios';
+import apiClient from './api';
 import JsonViewer from './components/JsonViewer';
 
 const API_URL = 'http://localhost:8000/api/v1';
@@ -44,39 +44,67 @@ export default function DataTable({
   totalPages, 
   totalRecords, 
   onPageChange,
-  isAdmin,
-  onDeleteRecord
+  onDeleteRecord,
+  isAdmin
 }) {
   const [editingRow, setEditingRow] = useState(null);
   const [editedData, setEditedData] = useState({});
   const [originalData, setOriginalData] = useState({});
 
   const handleEditClick = (row) => {
-    if (!isAdmin) {
-      alert('Only admins can edit records');
-      return;
-    }
+    // Any authenticated user can start an edit
     setEditingRow(row.id);
-    setEditedData(row);
-    setOriginalData(row);
+    setEditedData({ ...row });
+    setOriginalData({ ...row });
   };
 
   const handleSaveClick = async (rowId) => {
+    // Calculate the delta
+    const old_values_delta = {};
+    const new_values_delta = {};
+    Object.keys(editedData).forEach(key => {
+      if (originalData[key] !== editedData[key]) {
+        old_values_delta[key] = originalData[key];
+        new_values_delta[key] = editedData[key];
+      }
+    });
+
+    if (Object.keys(new_values_delta).length === 0) {
+      setEditingRow(null); // Nothing changed, just exit edit mode
+      return;
+    }
+
     const changeRequestPayload = {
       table_name: tableName,
       record_id: rowId,
-      old_values: originalData,
-      new_values: editedData,
+      old_values: old_values_delta,
+      new_values: new_values_delta,
     };
 
+    console.log('🚀 Submitting change request:', changeRequestPayload);
+    console.log('🔍 Payload details:', {
+      table_name: typeof changeRequestPayload.table_name,
+      record_id: typeof changeRequestPayload.record_id,
+      old_values: typeof changeRequestPayload.old_values,
+      new_values: typeof changeRequestPayload.new_values,
+      old_values_content: changeRequestPayload.old_values,
+      new_values_content: changeRequestPayload.new_values
+    });
+
     try {
-      await axios.post(`${API_URL}/changes`, changeRequestPayload);
-      onDataUpdate(editedData);
+      const response = await apiClient.post(`/changes`, changeRequestPayload);
+      console.log('✅ Change request submitted successfully:', response.data);
       setEditingRow(null);
-      alert('Change request submitted for approval');
+      alert('Change has been submitted for approval.');
     } catch (err) {
-      console.error("Failed to save the change:", err);
-      alert("Error: Could not save changes. Check the console for details.");
+      console.error("❌ Failed to submit change for approval:", err);
+      console.error("📋 Error details:", {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        statusText: err.response?.statusText
+      });
+      alert("Error: Could not submit change. Check the console for details.");
     }
   };
 
@@ -87,11 +115,40 @@ export default function DataTable({
   };
 
   const handleInputChange = (e, field) => {
-    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    const originalValue = originalData[field];
+    let value;
+
+    if (e.target.type === 'checkbox') {
+      value = e.target.checked;
+    } else {
+      const inputValue = e.target.value;
+      // Attempt to convert back to the original type
+      if (typeof originalValue === 'number') {
+        // Handle potential empty string for number fields
+        value = inputValue === '' ? null : Number(inputValue);
+      } else if (typeof originalValue === 'boolean') {
+        value = inputValue.toLowerCase() === 'true';
+      } else {
+        value = inputValue;
+      }
+    }
     setEditedData({ ...editedData, [field]: value });
   };
 
-  const renderCellContent = (value, fieldName) => {
+  const renderCellContent = (value, fieldName, row) => {
+    const isEditing = editingRow === row.id;
+    // For editing mode, show input field for the specific row
+    if (isEditing && fieldName !== 'id') {
+      return (
+        <input
+          type="text"
+          className="input-field"
+          value={editedData[fieldName] || ''}
+          onChange={(e) => handleInputChange(e, fieldName)}
+        />
+      );
+    }
+
     // Check if the value is JSON
     if (typeof value === 'object' && value !== null) {
       return <JsonViewer data={value} label={`{${Object.keys(value).length} items}`} />;
@@ -106,18 +163,6 @@ export default function DataTable({
       } catch {
         // Not JSON, continue with normal rendering
       }
-    }
-    
-    // For editing mode, show input field
-    if (editingRow && fieldName !== 'id') {
-      return (
-        <input
-          type="text"
-          className="input-field"
-          value={editedData[fieldName] || ''}
-          onChange={(e) => handleInputChange(e, fieldName)}
-        />
-      );
     }
     
     // Normal display
@@ -149,7 +194,7 @@ export default function DataTable({
                     </div>
                 </th>
             ))}
-            {isAdmin && <th>Actions</th>}
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -157,32 +202,32 @@ export default function DataTable({
             <tr key={row.id}>
               {headers.map(header => (
                 <td key={header}>
-                  {renderCellContent(row[header], header)}
+                  {renderCellContent(row[header], header, row)}
                 </td>
               ))}
-              {isAdmin && (
-                <td className="actions-cell">
-                  {editingRow === row.id ? (
-                    <div className="edit-actions">
-                      <button onClick={() => handleSaveClick(row.id)} className="action-button save-button">
-                        Save
-                      </button>
-                      <button onClick={handleCancelClick} className="action-button cancel-button">
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="edit-actions">
-                      <button onClick={() => handleEditClick(row)} className="link-button">
-                        Edit
-                      </button>
+              <td className="actions-cell">
+                {editingRow === row.id ? (
+                  <div className="edit-actions">
+                    <button onClick={() => handleSaveClick(row.id)} className="action-button save-button">
+                      Submit for Approval
+                    </button>
+                    <button onClick={handleCancelClick} className="action-button cancel-button">
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div className="edit-actions">
+                    <button onClick={() => handleEditClick(row)} className="link-button">
+                      Edit
+                    </button>
+                    {isAdmin && (
                       <button onClick={() => onDeleteRecord(row.id)} className="link-button delete-button">
                         Delete
                       </button>
-                    </div>
-                  )}
-                </td>
-              )}
+                    )}
+                  </div>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
