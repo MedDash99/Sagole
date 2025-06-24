@@ -18,8 +18,6 @@ ENV PYTHONPATH "${PYTHONPATH}:/app"
 # Copy all your project files into the container
 COPY . .
 
-# Make the wait-for-postgres script executable
-RUN chmod +x /app/wait-for-postgres.sh
 
 # Expose the port the app runs on
 EXPOSE 8000

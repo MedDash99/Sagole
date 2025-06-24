@@ -29,10 +29,11 @@ def upgrade() -> None:
         sa.Column('before_state', sa.JSON(), nullable=True),
         sa.Column('after_state', sa.JSON(), nullable=False),
         sa.Column('approved_by_id', sa.Integer(), sa.ForeignKey('users.id'), nullable=False),
-        sa.Column('approved_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False)
+        sa.Column('approved_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        schema="dev"
     )
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.drop_table('audit_log') 
+    op.drop_table('audit_log', schema="dev") 

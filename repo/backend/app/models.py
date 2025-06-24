@@ -7,7 +7,6 @@ from .database import Base
 
 class User(Base):
     __tablename__ = "users"
-    __table_args__ = {"schema": "dev"}
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, index=True, nullable=False)
@@ -23,7 +22,6 @@ class User(Base):
 
 class Product(Base):
     __tablename__ = "products"
-    __table_args__ = {"schema": "dev"}
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)

@@ -118,8 +118,14 @@ def seed_database(schema: Optional[str] = None):
         db.commit()
 
         # Debugging: list tables
+        inspector = inspect(engine)
         result = db.execute(text(f"SELECT table_name FROM information_schema.tables WHERE table_schema = '{schema}'"))
         print(f"Tables in schema {schema}: {[row[0] for row in result]}")
+
+        # Check if the users table exists before trying to query it.
+        if not inspector.has_table("users", schema=schema):
+            print(f"Users table not found in schema '{schema}'. Skipping seeding. Migrations might be running.")
+            return
 
         seed_data_for_schema = {
             "dev": {

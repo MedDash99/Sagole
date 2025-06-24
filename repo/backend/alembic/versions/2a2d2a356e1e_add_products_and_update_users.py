@@ -33,7 +33,7 @@ def upgrade() -> None:
 
     with op.batch_alter_table('users', schema="dev") as batch_op:
         batch_op.add_column(sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now()))
-        batch_op.alter_column('password', new_column_name='password_hash', existing_type=sa.String())
+        batch_op.alter_column('password', new_column_name='password_hash', existing_type=sa.String(), nullable=False)
 
 
 def downgrade() -> None:

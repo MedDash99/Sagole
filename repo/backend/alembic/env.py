@@ -72,7 +72,7 @@ def run_migrations_online() -> None:
         connection.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
         
         # Set search path to this schema
-        connection.execute(text(f"SET search_path TO {schema}"))
+        #connection.execute(text(f"SET search_path TO {schema}"))
 
         # In the context, ensure Alembic knows about the schema
         context.configure(
