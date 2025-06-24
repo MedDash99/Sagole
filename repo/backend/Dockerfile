@@ -1,24 +1,20 @@
-FROM python:3.9-slim
+# Use an official Python 3.11 slim image as the base
+FROM python:3.11-slim
 
-# Set the working directory
+# Set the working directory inside the container
 WORKDIR /app
 
+# We need the "netcat" tool for our entrypoint script to work.
+RUN apt-get update && apt-get install -y --no-install-recommends netcat-openbsd &&     rm -rf /var/lib/apt/lists/*
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
+# Copy the requirements file into the container
+COPY ./requirements.txt .
 
-COPY requirements.txt .
-
-
+# Install the Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-ENV PYTHONPATH "${PYTHONPATH}:/app"
-
-# Copy all your project files into the container
+# Copy the rest of your backend application code into the container
 COPY . .
 
-
-# Expose the port the app runs on
-EXPOSE 8000
-
+# Make our entrypoint script executable
+RUN chmod +x ./entrypoint.sh
