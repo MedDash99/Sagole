@@ -59,7 +59,7 @@ const LoginPage = () => {
         <button type="submit" style={{ width: '100%' }}>Log In</button>
       </form>
       <p style={{ marginTop: 24, opacity: 0.7, fontSize: 14 }}>
-        Demo: <b>admin/admin</b> or <b>user/user</b>
+        Demo: <b>admin_dev/admin123</b> or <b>user_dev/user123</b>
       </p>
     </div>
   );

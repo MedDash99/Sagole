@@ -7,6 +7,7 @@ from .database import Base
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = {'schema': 'dev'}
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, index=True, nullable=False)
@@ -22,6 +23,7 @@ class User(Base):
 
 class Product(Base):
     __tablename__ = "products"
+    __table_args__ = {'schema': 'dev'}
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
@@ -38,6 +40,7 @@ class ChangeStatus(enum.Enum):
 
 class PendingChange(Base):
     __tablename__ = "pending_changes"
+    __table_args__ = {'schema': 'dev'}
 
     id = Column(Integer, primary_key=True, index=True)
     table_name = Column(String, nullable=False)
@@ -50,6 +53,7 @@ class PendingChange(Base):
 
 class Snapshot(Base):
     __tablename__ = "snapshots"
+    __table_args__ = {'schema': 'dev'}
 
     id = Column(Integer, primary_key=True, index=True)
     table_name = Column(String, nullable=False)
@@ -60,6 +64,7 @@ class Snapshot(Base):
 
 class AuditLog(Base):
     __tablename__ = 'audit_log'
+    __table_args__ = {'schema': 'dev'}
 
     id = Column(Integer, primary_key=True, index=True)
     pending_change_id = Column(Integer, nullable=False)

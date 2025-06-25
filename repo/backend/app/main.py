@@ -1,27 +1,34 @@
-from fastapi import FastAPI, Depends
-from sqlalchemy.orm import Session
-from sqlalchemy import text
+# app/main.py
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app import models, auth
+from sqlalchemy import text # We need this to execute raw SQL
 
-# Use absolute imports starting from 'app'
-from app.database import SessionLocal
-from app.api import router as api_router # Import the router correctly
-from app.dependencies import get_db
+from app.api import router as api_router
+from app.database import engine, Base
 from app import db_manager
+from app import models 
 
+# --- Part 1: Setup that runs when the file is first loaded ---
+
+print("Ensuring 'dev' schema and database tables exist...")
+with engine.connect() as connection:
+    # Create the 'dev' schema if it doesn't already exist
+    connection.execute(text("CREATE SCHEMA IF NOT EXISTS dev"))
+    connection.commit() # Commit the transaction
+
+# Create all tables (they will be created in the 'dev' schema as configured in models)
+print("Creating database tables in 'dev' schema...")
+Base.metadata.create_all(bind=engine)
+print("Table check complete.")
+
+
+# --- Part 2: Application Configuration ---
 app = FastAPI(title="Sagole Database Admin Panel API")
 
-# This line tells FastAPI to run our function when the application starts up
-@app.on_event("startup")
-def on_startup():
-    print("Running startup tasks...")
-    # Only call the seed function from your db_manager
-    db_manager.seed_database() 
-    print("Startup tasks complete.")
-
-# CORS middleware to allow frontend requests
-origins = ["http://localhost:5173", "http://localhost:3000"]
+origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -30,18 +37,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include the API router
 app.include_router(api_router, prefix="/api/v1")
+
+
+# --- Part 3: Events and Basic Routes ---
+@app.on_event("startup")
+def on_startup():
+    print("Server startup event: Seeding database...")
+    db_manager.seed_database()
+    print("Database seeding complete. Application is ready.")
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the Sagole Admin API"}
-
-@app.get("/health")
-def health_check(db: Session = Depends(get_db)):
-    """Checks the database connection."""
-    try:
-        db.execute(text("SELECT 1"))
-        return {"status": "ok", "database": "connected"}
-    except Exception as e:
-        return {"status": "error", "database": "disconnected", "detail": str(e)}
+    return {"message": "Welcome! The Sagole Admin API is running."}

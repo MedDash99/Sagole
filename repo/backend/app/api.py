@@ -1,3 +1,4 @@
+# app/api.py
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import inspect
@@ -16,13 +17,24 @@ router = APIRouter()
 
 @router.post("/token")
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    print(f"Login attempt - Username: {form_data.username}")
     user = db.query(models.User).filter(models.User.username == form_data.username).first()
-    if not user or not auth.verify_password(form_data.password, user.password):
+    print(f"User found: {user is not None}")
+    
+    if user:
+        print(f"User role: {user.role}, is_active: {user.is_active}")
+        password_valid = auth.verify_password(form_data.password, user.password_hash)
+        print(f"Password verification: {password_valid}")
+    
+    if not user or not auth.verify_password(form_data.password, user.password_hash):
+        print("Login failed - Invalid credentials")
         raise HTTPException(
             status_code=401,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    print("Login successful - Generating token")
     access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = auth.create_access_token(
         data={"sub": user.username, "role": user.role}, expires_delta=access_token_expires

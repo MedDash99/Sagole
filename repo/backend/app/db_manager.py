@@ -38,7 +38,8 @@ def _make_record_serializable(record: Optional[dict]) -> Optional[dict]:
 
 def get_all_table_names() -> list[str]:
     inspector = inspect(engine)
-    return [name for name in inspector.get_table_names() if name != 'alembic_version']
+    # Get tables from the 'dev' schema instead of the default schema
+    return [name for name in inspector.get_table_names(schema='dev') if name != 'alembic_version']
 
 def get_table_data(
     table_name: str, 
@@ -47,10 +48,8 @@ def get_table_data(
     filters_json: Optional[str] = None
 ) -> list[dict]:
     with engine.connect() as connection:
-        metadata = MetaData()
-        table = Table(table_name, metadata, autoload_with=engine)
-        
-        query = f"SELECT * FROM {table.name}"
+        # Use the 'dev' schema when querying tables
+        query = f"SELECT * FROM dev.{table_name}"
         params = {"limit": limit, "offset": offset}
         
         if filters_json:
@@ -66,6 +65,10 @@ def get_table_data(
                         column = f['column']
                         operator = f['operator']
                         value = f['value']
+                        
+                        # Get table metadata for column validation
+                        metadata = MetaData()
+                        table = Table(table_name, metadata, autoload_with=engine, schema='dev')
                         
                         # Prevent SQL injection by validating column and operator
                         if column not in [c.name for c in table.columns]:
@@ -94,7 +97,8 @@ def get_table_data(
 def get_table_schema(table_name: str) -> list[dict]:
     """Get the schema information for a specific table"""
     inspector = inspect(engine)
-    columns = inspector.get_columns(table_name)
+    # Get columns from the 'dev' schema
+    columns = inspector.get_columns(table_name, schema='dev')
     schema = []
     
     for column in columns:
@@ -133,11 +137,19 @@ def seed_database(schema: Optional[str] = None):
                     {'username': 'admin_dev', 'email': 'admin.dev@example.com', 'full_name': 'Dev Admin', 'password_hash': pwd_context.hash('admin123'), 'role': 'admin'},
                     {'username': 'user_dev', 'email': 'user.dev@example.com', 'full_name': 'Dev User', 'password_hash': pwd_context.hash('user123'), 'role': 'user'},
                     {'username': 'guest_dev', 'email': 'guest.dev@example.com', 'full_name': 'Dev Guest', 'password_hash': pwd_context.hash('guest123'), 'role': 'guest'},
+                    # --- New Users ---
+                    {'username': 'sara_d', 'email': 'sara.d@example.com', 'full_name': 'Sara Davis', 'password_hash': pwd_context.hash('pass123'), 'role': 'user'},
+                    {'username': 'mike_b', 'email': 'mike.b@example.com', 'full_name': 'Mike Brown', 'password_hash': pwd_context.hash('pass123'), 'role': 'user'},
                 ],
                 "products": [
                     {'name': 'Laptop', 'description': 'A high-performance laptop for developers.', 'price': 1200.50, 'stock_quantity': 15, 'category': 'Electronics'},
                     {'name': 'Coffee Mug', 'description': 'A mug to hold your favorite beverage.', 'price': 15.00, 'stock_quantity': 150, 'category': 'Kitchenware'},
                     {'name': 'Desk Chair', 'description': 'An ergonomic chair for long hours of coding.', 'price': 350.75, 'stock_quantity': 30, 'category': 'Furniture'},
+                    # --- New Products ---
+                    {'name': 'Wireless Mouse', 'description': 'A comfortable and responsive wireless mouse.', 'price': 45.00, 'stock_quantity': 200, 'category': 'Peripherals'},
+                    {'name': 'Monitor', 'description': 'A 27-inch 4K monitor with great color accuracy.', 'price': 650.00, 'stock_quantity': 50, 'category': 'Electronics'},
+                    {'name': 'Notebook', 'description': 'A classic notebook for all your thoughts.', 'price': 9.99, 'stock_quantity': 500, 'category': 'Stationery'},
+                    {'name': 'Webcam', 'description': 'A 1080p webcam for clear video calls.', 'price': 89.50, 'stock_quantity': 75, 'category': 'Peripherals'},
                 ]
             },
             "test": {
@@ -194,7 +206,8 @@ def get_record_by_id(table_name: str, record_id: int) -> Optional[dict]:
     
     with engine.connect() as connection:
         metadata = MetaData()
-        table = Table(table_name, metadata, autoload_with=engine)
+        # Load table from 'dev' schema
+        table = Table(table_name, metadata, autoload_with=engine, schema='dev')
         
         primary_key_col = next((c for c in table.columns if c.primary_key), None)
         if primary_key_col is None:
@@ -233,42 +246,62 @@ def get_pending_changes(db: Session):
 
 def approve_change(db: Session, change_id: int, admin_user_id: int):
     """Approve a pending change and apply it to the target table."""
+    print(f"🔄 Approving change {change_id} by admin user {admin_user_id}")
+    
     change = db.query(models.PendingChange).filter(
         models.PendingChange.id == change_id,
         models.PendingChange.status == models.ChangeStatus.PENDING
     ).first()
     
     if not change:
+        print(f"❌ Change {change_id} not found or not pending")
         raise ValueError(f"Pending change with id {change_id} not found")
+
+    print(f"📝 Change details: table={change.table_name}, record_id={change.record_id}")
+    print(f"📝 New values: {change.new_values}")
 
     try:
         # Get the state of the record *before* applying the change
+        print("🔍 Getting before state...")
         before_state = get_record_by_id(change.table_name, change.record_id)
+        print(f"📊 Before state: {before_state}")
 
         # Apply the change to the target table
+        print("✏️ Applying change to table...")
         _apply_change_to_table(db, change)
+        print("✅ Change applied successfully")
 
         # Create an audit log entry
+        print("📝 Creating audit log entry...")
+        # Serialize datetime objects to make them JSON serializable
+        serialized_before_state = _make_record_serializable(before_state)
+        serialized_after_state = _make_record_serializable(change.new_values)
+        
         audit_log_entry = models.AuditLog(
             pending_change_id=change.id,
             table_name=change.table_name,
             record_id=str(change.record_id) if change.record_id else None,
-            before_state=before_state,
-            after_state=change.new_values,
+            before_state=serialized_before_state,
+            after_state=serialized_after_state,
             approved_by_id=admin_user_id,
         )
         db.add(audit_log_entry)
+        print("📝 Audit log entry created")
         
         # Update the change status to approved
+        print("🔄 Updating change status to APPROVED...")
         change.status = models.ChangeStatus.APPROVED
-        # Note: You would add reviewed_by, reviewed_at columns to PendingChange model
-        # change.reviewed_by = admin_user_id
-        # change.reviewed_at = func.now()
-
+        
+        print("💾 Committing transaction...")
         db.commit()
+        print("✅ Transaction committed successfully")
         
         return change
     except Exception as e:
+        print(f"❌ Error in approve_change: {str(e)}")
+        print(f"❌ Exception type: {type(e).__name__}")
+        import traceback
+        print(f"❌ Traceback: {traceback.format_exc()}")
         db.rollback()
         raise ValueError(f"Failed to approve change: {str(e)}")
 
@@ -292,7 +325,8 @@ def reject_change(db: Session, change_id: int, admin_user_id: int):
 def delete_record(db: Session, table_name: str, record_id: int):
     """Deletes a record from the specified table."""
     metadata = MetaData()
-    table = Table(table_name, metadata, autoload_with=engine)
+    # Load table from 'dev' schema
+    table = Table(table_name, metadata, autoload_with=engine, schema='dev')
 
     primary_key_col = None
     for col in table.columns:
@@ -318,33 +352,55 @@ def _apply_change_to_table(db: Session, change: models.PendingChange):
     new_values = change.new_values
     record_id = change.record_id
     
-    # Get table metadata
-    metadata = MetaData()
-    table = Table(table_name, metadata, autoload_with=engine)
+    print(f"🔧 _apply_change_to_table: table={table_name}, record_id={record_id}")
+    print(f"🔧 New values to apply: {new_values}")
     
-    if record_id is None:
-        # This is a new record - INSERT
-        insert_stmt = table.insert().values(**new_values)
-        db.execute(insert_stmt)
-    else:
-        # This is an update to an existing record - UPDATE
-        # Find the primary key column
-        primary_key_col = None
-        for col in table.columns:
-            if col.primary_key:
-                primary_key_col = col
-                break
+    try:
+        # Get table metadata from 'dev' schema
+        print("🔧 Loading table metadata...")
+        metadata = MetaData()
+        table = Table(table_name, metadata, autoload_with=engine, schema='dev')
+        print(f"🔧 Table loaded successfully, columns: {[c.name for c in table.columns]}")
         
-        if primary_key_col is None:
-            raise ValueError(f"No primary key found for table {table_name}")
+        if record_id is None:
+            # This is a new record - INSERT
+            print("🔧 Performing INSERT operation...")
+            insert_stmt = table.insert().values(**new_values)
+            result = db.execute(insert_stmt)
+            print(f"🔧 INSERT completed, affected rows: {result.rowcount}")
+        else:
+            # This is an update to an existing record - UPDATE
+            print("🔧 Performing UPDATE operation...")
+            # Find the primary key column
+            primary_key_col = None
+            for col in table.columns:
+                if col.primary_key:
+                    primary_key_col = col
+                    break
+            
+            if primary_key_col is None:
+                raise ValueError(f"No primary key found for table {table_name}")
+            
+            print(f"🔧 Primary key column: {primary_key_col.name}")
+            
+            update_stmt = table.update().where(
+                primary_key_col == record_id
+            ).values(**new_values)
+            
+            result = db.execute(update_stmt)
+            print(f"🔧 UPDATE completed, affected rows: {result.rowcount}")
+            
+            if result.rowcount == 0:
+                raise ValueError(f"No record found with id {record_id} in table {table_name}")
+                
+        print("🔧 _apply_change_to_table completed successfully")
         
-        update_stmt = table.update().where(
-            primary_key_col == record_id
-        ).values(**new_values)
-        
-        result = db.execute(update_stmt)
-        if result.rowcount == 0:
-            raise ValueError(f"No record found with id {record_id} in table {table_name}")
+    except Exception as e:
+        print(f"❌ Error in _apply_change_to_table: {str(e)}")
+        print(f"❌ Exception type: {type(e).__name__}")
+        import traceback
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        raise
 
 def _create_table_snapshot(db: Session, table_name: str, change_id: int):
     """DEPRECATED: Create a snapshot of the entire table state"""
