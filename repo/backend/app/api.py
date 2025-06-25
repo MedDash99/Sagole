@@ -9,14 +9,18 @@ from typing import Optional
 
 # Import the new schema and the get_db dependency
 from . import db_manager, schemas
-from .dependencies import get_db
 
 router = APIRouter()
 
+# Create auth functions with proper db injection
+get_current_user = auth.create_get_current_user(db_manager.get_db)
+get_current_active_user = lambda current_user: auth.get_current_active_user(current_user)
+get_current_admin_user = lambda current_user: auth.get_current_admin_user(current_user)
+
 # --- Add the new endpoint below ---
 
-@router.post("/token")
-def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+@router.post("/{env}/token")
+def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(db_manager.get_db)):
     print(f"Login attempt - Username: {form_data.username}")
     user = db.query(models.User).filter(models.User.username == form_data.username).first()
     print(f"User found: {user is not None}")
@@ -42,85 +46,89 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     return {"access_token": access_token, "token_type": "bearer", "role": user.role}
 
 
-@router.post("/changes", status_code=201)
+@router.post("/{env}/changes", status_code=201)
 def submit_change_for_approval(
     change_request: schemas.ChangeRequest, 
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.get_current_active_user)
+    db: Session = Depends(db_manager.get_db),
+    current_user: models.User = Depends(get_current_user)
 ):
     """
     Receives an edit from the frontend and submits it for approval
     by creating a record in the pending_changes table.
     """
     try:
+        active_user = get_current_active_user(current_user)
         return db_manager.create_change_request(
             db=db, 
             change_data=change_request, 
-            user=current_user
+            user=active_user
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to submit change: {str(e)}")
 
-@router.get("/tables/{table_name}/schema")
-def get_table_schema(table_name: str):
+@router.get("/{env}/tables/{table_name}/schema")
+def get_table_schema(table_name: str, db: Session = Depends(db_manager.get_db)):
     """
     Get the schema information for a specific table
     """
     try:
-        schema = db_manager.get_table_schema(table_name=table_name)
+        schema = db_manager.get_table_schema(db=db, table_name=table_name)
         return {"table": table_name, "schema": schema}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/changes")
+@router.get("/{env}/changes")
 def get_pending_changes(
-    db: Session = Depends(get_db),
-    admin_user: models.User = Depends(auth.get_current_admin_user)
+    db: Session = Depends(db_manager.get_db),
+    current_user: models.User = Depends(get_current_user)
 ):
     """
     Get all pending changes for approval
     """
     try:
+        admin_user = get_current_admin_user(current_user)
         changes = db_manager.get_pending_changes(db=db)
         return {"changes": changes}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/changes/{change_id}/approve")
+@router.post("/{env}/changes/{change_id}/approve")
 def approve_change(
     change_id: int, 
-    db: Session = Depends(get_db),
-    admin_user: models.User = Depends(auth.get_current_admin_user)
+    db: Session = Depends(db_manager.get_db),
+    current_user: models.User = Depends(get_current_user)
 ):
     """
     Approve a pending change
     """
     try:
+        admin_user = get_current_admin_user(current_user)
         result = db_manager.approve_change(db=db, change_id=change_id, admin_user_id=admin_user.id)
         return {"message": "Change approved successfully", "change_id": change_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/changes/{change_id}/reject")
+@router.post("/{env}/changes/{change_id}/reject")
 def reject_change(
     change_id: int, 
-    db: Session = Depends(get_db),
-    admin_user: models.User = Depends(auth.get_current_admin_user)
+    db: Session = Depends(db_manager.get_db),
+    current_user: models.User = Depends(get_current_user)
 ):
     """
     Reject a pending change
     """
     try:
+        admin_user = get_current_admin_user(current_user)
         result = db_manager.reject_change(db=db, change_id=change_id, admin_user_id=admin_user.id)
         return {"message": "Change rejected successfully", "change_id": change_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.delete("/tables/{table_name}/{record_id}", status_code=204)
+@router.delete("/{env}/tables/{table_name}/{record_id}", status_code=204)
 def delete_record_from_table(
     table_name: str, 
     record_id: int, 
-    db: Session = Depends(get_db)
+    db: Session = Depends(db_manager.get_db)
 ):
     """Deletes a record from a table."""
     try:
@@ -132,34 +140,36 @@ def delete_record_from_table(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/seed")
-def seed_db():
+@router.post("/{env}/seed")
+def seed_db(env: str):
     try:
-        result = db_manager.seed_database()
+        result = db_manager.seed_database(schema=env)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/tables")
-def list_tables():
+@router.get("/{env}/tables")
+def list_tables(db: Session = Depends(db_manager.get_db)):
     try:
-        tables = db_manager.get_all_table_names()
+        tables = db_manager.get_all_table_names(db=db)
         return {"tables": tables}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/tables/{table_name}")
+@router.get("/{env}/tables/{table_name}")
 def get_data_from_table(
     table_name: str, 
     limit: int = 20, 
     offset: int = 0,
-    filters: Optional[str] = None
+    filters: Optional[str] = None,
+    db: Session = Depends(db_manager.get_db)
 ):
     try:
-        if table_name not in db_manager.get_all_table_names():
+        if table_name not in db_manager.get_all_table_names(db=db):
             raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found.")
             
         data = db_manager.get_table_data(
+            db=db,
             table_name=table_name, 
             limit=limit, 
             offset=offset,
@@ -169,10 +179,10 @@ def get_data_from_table(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/tables/{table_name}/snapshots")
+@router.get("/{env}/tables/{table_name}/snapshots")
 def get_table_snapshots(
     table_name: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(db_manager.get_db)
 ):
     """Get all snapshots for a specific table"""
     try:
@@ -181,10 +191,10 @@ def get_table_snapshots(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/snapshots/{snapshot_id}")
+@router.get("/{env}/snapshots/{snapshot_id}")
 def get_snapshot(
     snapshot_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(db_manager.get_db)
 ):
     """Get the full data for a specific snapshot"""
     try:

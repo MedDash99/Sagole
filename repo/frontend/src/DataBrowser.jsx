@@ -28,9 +28,8 @@ export default function DataBrowser() {
     const fetchTables = async () => {
       try {
         setError(null);
-        const response = await axios.get(`${API_URL}/tables`, { 
-          signal: controller.signal,
-          params: { environment: currentEnvironment }
+        const response = await axios.get(`${API_URL}/${currentEnvironment}/tables`, { 
+          signal: controller.signal
         });
         setTables(response.data.tables);
         
@@ -62,8 +61,7 @@ export default function DataBrowser() {
         
         const params = {
           page: currentPage,
-          page_size: pageSize,
-          environment: currentEnvironment
+          page_size: pageSize
         };
 
         // Add filters to params
@@ -71,7 +69,7 @@ export default function DataBrowser() {
           params.filters = JSON.stringify(filters);
         }
 
-        const response = await axios.get(`${API_URL}/tables/${selectedTable}`, { 
+        const response = await axios.get(`${API_URL}/${currentEnvironment}/tables/${selectedTable}`, { 
           signal: controller.signal,
           params
         });
@@ -139,7 +137,7 @@ export default function DataBrowser() {
 
   const handleDeleteRecord = async (recordId) => {
     try {
-      await axios.delete(`${API_URL}/tables/${selectedTable}/${recordId}`);
+      await axios.delete(`${API_URL}/${currentEnvironment}/tables/${selectedTable}/${recordId}`);
       setTableData(currentData => currentData.filter(row => row.id !== recordId));
       alert('Record deleted successfully');
     } catch (err) {

@@ -5,7 +5,7 @@ import axios from 'axios';
 const API_URL = 'http://localhost:8000/api/v1';
 
 const LoginPage = () => {
-  const { login } = useAppContext();
+  const { login, currentEnvironment } = useAppContext();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -19,7 +19,7 @@ const LoginPage = () => {
     params.append('password', password);
 
     try {
-      const response = await axios.post(`${API_URL}/token`, params, {
+      const response = await axios.post(`${API_URL}/${currentEnvironment}/token`, params, {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       });
       const { access_token, role } = response.data;

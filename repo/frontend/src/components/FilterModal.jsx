@@ -84,10 +84,10 @@ const FilterModal = ({ isOpen, onClose, onApplyFilter, columns }) => {
         </div>
         
         <div className="modal-footer">
-          <button type="button" onClick={onClose}>
+          <button type="button" onClick={onClose} className="add-filter-btn">
             Cancel
           </button>
-          <button type="button" onClick={handleApply}>
+          <button type="button" onClick={handleApply} className="add-filter-btn">
             Apply Filters
           </button>
         </div>

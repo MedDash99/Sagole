@@ -1,6 +1,7 @@
 // frontend/src/ChangeRequests.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import apiClient from './api';
+import { useAppContext } from './contexts/AppContext';
 
 // --- Helper Function for Comparison ---
 /**
@@ -47,6 +48,7 @@ const getDiff = (originalRow, pendingRow) => {
 };
 
 export default function ChangeRequests() {
+    const { currentEnvironment } = useAppContext();
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -55,7 +57,7 @@ export default function ChangeRequests() {
         const fetchRequests = async () => {
             try {
                 setLoading(true);
-                const response = await apiClient.get('/changes');
+                const response = await apiClient.get(`/${currentEnvironment}/changes`);
                 // The backend returns { changes: [{ change_details, original_record }] }
                 setRequests(response.data.changes || []);
             } catch (err) {
@@ -67,11 +69,11 @@ export default function ChangeRequests() {
         };
 
         fetchRequests();
-    }, []);
+    }, [currentEnvironment]);
     
     const handleAction = async (id, action) => {
         try {
-            await apiClient.post(`/changes/${id}/${action}`);
+            await apiClient.post(`/${currentEnvironment}/changes/${id}/${action}`);
             setRequests(prev => prev.filter(req => req.change_details.id !== id));
             alert(`Change request ${action}ed successfully`);
         } catch (err) {

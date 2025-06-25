@@ -2,12 +2,12 @@ import enum
 from sqlalchemy import Column, Integer, String, JSON, DateTime, Enum, Boolean, Numeric, Text
 from sqlalchemy.sql import func
 from .database import Base
+from .config import settings
 
 
 
 class User(Base):
     __tablename__ = "users"
-    __table_args__ = {'schema': 'dev'}
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, index=True, nullable=False)
@@ -23,7 +23,6 @@ class User(Base):
 
 class Product(Base):
     __tablename__ = "products"
-    __table_args__ = {'schema': 'dev'}
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
@@ -40,7 +39,6 @@ class ChangeStatus(enum.Enum):
 
 class PendingChange(Base):
     __tablename__ = "pending_changes"
-    __table_args__ = {'schema': 'dev'}
 
     id = Column(Integer, primary_key=True, index=True)
     table_name = Column(String, nullable=False)
@@ -53,7 +51,6 @@ class PendingChange(Base):
 
 class Snapshot(Base):
     __tablename__ = "snapshots"
-    __table_args__ = {'schema': 'dev'}
 
     id = Column(Integer, primary_key=True, index=True)
     change_request_id = Column(Integer, nullable=False)  # References pending_changes.id
@@ -63,7 +60,6 @@ class Snapshot(Base):
 
 class AuditLog(Base):
     __tablename__ = 'audit_log'
-    __table_args__ = {'schema': 'dev'}
 
     id = Column(Integer, primary_key=True, index=True)
     pending_change_id = Column(Integer, nullable=False)
@@ -73,3 +69,9 @@ class AuditLog(Base):
     after_state = Column(JSON, nullable=False)
     approved_by_id = Column(Integer, nullable=False)
     approved_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+class Version(Base):
+    __tablename__ = 'versions'
+
+    id = Column(Integer, primary_key=True, index=True)
+    table_name = Column(String, nullable=False)
