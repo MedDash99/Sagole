@@ -5,7 +5,7 @@ APP_ENV = os.getenv("APP_ENV", "dev")
 
 class Settings(BaseSettings):
     APP_ENV: str = APP_ENV
-    DATABASE_URL: str = f"postgresql://sagole_user:password@localhost/{APP_ENV}_db"
+    DATABASE_URL: str = os.getenv("DATABASE_URL", f"postgresql://sagole_user:password@localhost/{APP_ENV}_db")
     DB_SCHEMA: str = APP_ENV
 
     # Security settings

@@ -1,0 +1,71 @@
+# Virtual environments
+venv/
+env/
+.venv/
+.env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.pytest_cache/
+.coverage
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker
+.dockerignore
+Dockerfile
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Documentation
+*.md
+README*
+
+# Test files
+test/
+tests/
+*_test.py
+test_*.py
+
+# Alembic
+alembic.ini
+
+# Jupyter notebooks
+*.ipynb
+.ipynb_checkpoints/ 
