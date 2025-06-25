@@ -56,10 +56,9 @@ class Snapshot(Base):
     __table_args__ = {'schema': 'dev'}
 
     id = Column(Integer, primary_key=True, index=True)
-    table_name = Column(String, nullable=False)
-    record_id = Column(Integer, nullable=False)
-    data = Column(JSON, nullable=False)
-    change_id = Column(Integer, nullable=False)
+    change_request_id = Column(Integer, nullable=False)  # References pending_changes.id
+    table_name = Column(String(100), nullable=False)
+    snapshot_data = Column(JSON, nullable=False)  # Complete table data as JSON
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class AuditLog(Base):

@@ -266,12 +266,17 @@ def approve_change(db: Session, change_id: int, admin_user_id: int):
         before_state = get_record_by_id(change.table_name, change.record_id)
         print(f"📊 Before state: {before_state}")
 
-        # Apply the change to the target table
+        # Step 1: Apply the change to the target table
         print("✏️ Applying change to table...")
         _apply_change_to_table(db, change)
         print("✅ Change applied successfully")
 
-        # Create an audit log entry
+        # Step 2: Take a snapshot of the entire table after the change
+        print("📸 Creating table snapshot...")
+        _create_table_snapshot(db, change.table_name, change.id)
+        print("✅ Table snapshot created successfully")
+
+        # Step 3: Create an audit log entry
         print("📝 Creating audit log entry...")
         # Serialize datetime objects to make them JSON serializable
         serialized_before_state = _make_record_serializable(before_state)
@@ -288,7 +293,7 @@ def approve_change(db: Session, change_id: int, admin_user_id: int):
         db.add(audit_log_entry)
         print("📝 Audit log entry created")
         
-        # Update the change status to approved
+        # Step 4: Update the change status to approved
         print("🔄 Updating change status to APPROVED...")
         change.status = models.ChangeStatus.APPROVED
         
@@ -402,7 +407,75 @@ def _apply_change_to_table(db: Session, change: models.PendingChange):
         print(f"❌ Traceback: {traceback.format_exc()}")
         raise
 
-def _create_table_snapshot(db: Session, table_name: str, change_id: int):
-    """DEPRECATED: Create a snapshot of the entire table state"""
-    pass
+def _create_table_snapshot(db: Session, table_name: str, change_request_id: int):
+    """Create a snapshot of the entire table state after a change is applied"""
+    print(f"📸 Creating snapshot for table {table_name} after change {change_request_id}")
+    
+    try:
+        # Get all data from the table using the existing session
+        print(f"📊 Reading all data from table {table_name}...")
+        table_data = _get_table_data_with_session(db, table_name, limit=10000, offset=0)
+        
+        # Serialize the data to ensure it's JSON compatible
+        serialized_data = [_make_record_serializable(record) for record in table_data if record is not None]
+        
+        print(f"📝 Table data contains {len(serialized_data)} records")
+        
+        # Create the snapshot record
+        snapshot = models.Snapshot(
+            change_request_id=change_request_id,
+            table_name=table_name,
+            snapshot_data=serialized_data  # Store as list of records
+        )
+        
+        db.add(snapshot)
+        print(f"✅ Snapshot created for table {table_name}")
+        
+    except Exception as e:
+        print(f"❌ Error creating snapshot: {str(e)}")
+        import traceback
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        raise ValueError(f"Failed to create snapshot for table {table_name}: {str(e)}")
+
+def _get_table_data_with_session(db: Session, table_name: str, limit: int = 20, offset: int = 0) -> list[dict]:
+    """Get table data using an existing database session instead of creating a new connection"""
+    try:
+        # Use the existing session to query the table
+        query = f"SELECT * FROM dev.{table_name} LIMIT :limit OFFSET :offset"
+        params = {"limit": limit, "offset": offset}
+        
+        result = db.execute(text(query), params)
+        rows = [dict(row._mapping) for row in result]
+        return rows
+    except Exception as e:
+        print(f"❌ Error querying table {table_name}: {str(e)}")
+        raise
+
+def get_snapshots_for_table(db: Session, table_name: str):
+    """Get all snapshots for a specific table, ordered by creation date (newest first)"""
+    snapshots = db.query(models.Snapshot).filter(
+        models.Snapshot.table_name == table_name
+    ).order_by(models.Snapshot.created_at.desc()).all()
+    
+    return [{
+        "id": snapshot.id,
+        "change_request_id": snapshot.change_request_id,
+        "table_name": snapshot.table_name,
+        "created_at": snapshot.created_at.isoformat(),
+        "record_count": len(snapshot.snapshot_data) if snapshot.snapshot_data else 0
+    } for snapshot in snapshots]
+
+def get_snapshot_data(db: Session, snapshot_id: int):
+    """Get the full data for a specific snapshot"""
+    snapshot = db.query(models.Snapshot).filter(models.Snapshot.id == snapshot_id).first()
+    if not snapshot:
+        raise ValueError(f"Snapshot with id {snapshot_id} not found")
+    
+    return {
+        "id": snapshot.id,
+        "change_request_id": snapshot.change_request_id,
+        "table_name": snapshot.table_name,
+        "created_at": snapshot.created_at.isoformat(),
+        "snapshot_data": snapshot.snapshot_data
+    }
 

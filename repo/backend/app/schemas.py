@@ -62,10 +62,9 @@ class PendingChange(PendingChangeBase):
 
 # Snapshot Schemas
 class SnapshotBase(BaseModel):
+    change_request_id: int
     table_name: str
-    record_id: int
-    data: dict[str, Any]
-    change_id: int
+    snapshot_data: list[dict[str, Any]]  # Complete table data as list of records
 
 class SnapshotCreate(SnapshotBase):
     pass

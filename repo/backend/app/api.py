@@ -168,3 +168,29 @@ def get_data_from_table(
         return {"table": table_name, "data": data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/tables/{table_name}/snapshots")
+def get_table_snapshots(
+    table_name: str,
+    db: Session = Depends(get_db)
+):
+    """Get all snapshots for a specific table"""
+    try:
+        snapshots = db_manager.get_snapshots_for_table(db=db, table_name=table_name)
+        return {"table": table_name, "snapshots": snapshots}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/snapshots/{snapshot_id}")
+def get_snapshot(
+    snapshot_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get the full data for a specific snapshot"""
+    try:
+        snapshot_data = db_manager.get_snapshot_data(db=db, snapshot_id=snapshot_id)
+        return snapshot_data
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
