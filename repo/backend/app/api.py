@@ -1,4 +1,5 @@
 # app/api.py
+# API router for all endpoints related to authentication, data changes, and table management
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import inspect
@@ -12,15 +13,16 @@ from . import db_manager, schemas
 
 router = APIRouter()
 
-# Create auth functions with proper db injection
+# Dependency functions for user authentication and role validation
 get_current_user = auth.create_get_current_user(db_manager.get_db)
 get_current_active_user = lambda current_user: auth.get_current_active_user(current_user)
 get_current_admin_user = lambda current_user: auth.get_current_admin_user(current_user)
 
-# --- Add the new endpoint below ---
+# --- Endpoints ---
 
 @router.post("/{env}/token")
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(db_manager.get_db)):
+    # Handle user login and return an access token if credentials are valid
     print(f"Login attempt - Username: {form_data.username}")
     user = db.query(models.User).filter(models.User.username == form_data.username).first()
     print(f"User found: {user is not None}")
@@ -142,6 +144,7 @@ def delete_record_from_table(
 
 @router.post("/{env}/seed")
 def seed_db(env: str):
+    # Seed the database for a specific environment
     try:
         result = db_manager.seed_database(schema=env)
         return result
@@ -150,6 +153,7 @@ def seed_db(env: str):
 
 @router.get("/{env}/tables")
 def list_tables(db: Session = Depends(db_manager.get_db)):
+    # List all table names in the current environment
     try:
         tables = db_manager.get_all_table_names(db=db)
         return {"tables": tables}
@@ -164,6 +168,7 @@ def get_data_from_table(
     filters: Optional[str] = None,
     db: Session = Depends(db_manager.get_db)
 ):
+    # Fetch data from a specific table, with optional pagination and filtering
     try:
         if table_name not in db_manager.get_all_table_names(db=db):
             raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found.")
@@ -196,7 +201,7 @@ def get_snapshot(
     snapshot_id: int,
     db: Session = Depends(db_manager.get_db)
 ):
-    """Get the full data for a specific snapshot"""
+    # Retrieve the full data for a specific snapshot
     try:
         snapshot_data = db_manager.get_snapshot_data(db=db, snapshot_id=snapshot_id)
         return snapshot_data

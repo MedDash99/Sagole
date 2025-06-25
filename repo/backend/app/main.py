@@ -1,4 +1,5 @@
 # app/main.py
+# Main entry point for the FastAPI application
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, text, MetaData
@@ -6,15 +7,14 @@ from sqlalchemy import create_engine, text, MetaData
 from app.api import router as api_router
 from app.database import Base
 from app import db_manager
-from app import models  # This import is CRITICAL - it registers all models with Base.metadata
+from app import models  # Registers all models with Base.metadata
 from app.config import settings
 
 # --- Part 1: Setup that runs when the file is first loaded ---
 
 print("--- Initializing application setup ---")
 
-# In a multi-tenant setup where each environment has its own database and schema,
-# we need to ensure that the schema and tables are created for each one.
+# Ensure schemas and tables are created for each environment (multi-tenant setup)
 for env, db_url in db_manager.DATABASE_URLS.items():
     print(f"Processing environment: '{env}'...")
     try:
@@ -28,9 +28,6 @@ for env, db_url in db_manager.DATABASE_URLS.items():
             print(f"  -> Schema '{env}' is ready.")
 
         # Create all tables for the current environment's schema.
-        # We need to create a new metadata instance for each environment
-        print(f"  -> Creating tables in schema '{env}'...")
-        
         # Create a new metadata object to avoid conflicts between environments
         env_metadata = MetaData(schema=env)
         
@@ -53,6 +50,7 @@ print("--- Application setup finished ---")
 # --- Part 2: Application Configuration ---
 app = FastAPI(title="Sagole Database Admin Panel API")
 
+# Allow CORS for local frontend development
 origins = [
     "http://localhost:5173",
     "http://localhost:3000",
