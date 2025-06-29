@@ -14,7 +14,7 @@ Sagole is a full-stack, multi-environment database administration and auditing p
 - Responsive, modern UI built with React and Vite
 
 **Technologies Used:**
-- **Backend:** FastAPI, SQLAlchemy, PostgreSQL, Alembic, JWT Auth, Pydantic
+- **Backend:** FastAPI, SQLAlchemy, PostgreSQL,JWT Auth, Pydantic
 - **Frontend:** React, Vite, Axios, TailwindCSS
 
 ## Project Structure
@@ -70,7 +70,7 @@ See the README.md files in each directory for more specific information.
 ### 1. Clone the Repository
 
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/MedDash99/Sagole.git
 cd Sagole
 ```
 
@@ -107,7 +107,7 @@ The frontend will run on [http://localhost:5173](http://localhost:5173) and conn
 
 ## Contributors
 
-[List the contributors to this project here.]
+[Mendel Dashevsky]
 
 ---
 
