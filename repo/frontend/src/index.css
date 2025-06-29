@@ -58,6 +58,83 @@ button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Modal Content */
+.modal-content {
+  background: #fff;
+  color: #111827;
+  padding: 2rem;
+  border-radius: 8px;
+  min-width: 320px;
+  max-width: 95vw;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  position: relative;
+  z-index: 1001;
+}
+
+/* Modal Header/Footer */
+.modal-header,
+.modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.modal-footer {
+  margin-top: 1.5rem;
+}
+
+/* Filter Row */
+.filter-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  align-items: center;
+}
+
+/* Close/Remove Buttons */
+.modal-close,
+.remove-filter {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #888;
+  padding: 0 0.5rem;
+}
+
+.modal-close:hover,
+.remove-filter:hover {
+  color: #e11d48; /* red-600 */
+}
+
+/* Add Filter Button */
+.add-filter-btn {
+  background: #6366f1; /* indigo-500 */
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.4em 0.9em;
+  margin-left: 0.5em;
+  margin-top: 0.5em;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.add-filter-btn:hover {
+  background: #4f46e5; /* indigo-600 */
+}
 
 @media (prefers-color-scheme: light) {
   :root {
